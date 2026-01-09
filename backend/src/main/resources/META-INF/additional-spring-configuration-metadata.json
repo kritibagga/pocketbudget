@@ -1,0 +1,19 @@
+{
+	"properties": [
+		{
+			"name": "security.jwt.secret",
+			"type": "java.lang.String",
+			"description": "Secret key used to sign JWT access tokens"
+		},
+		{
+			"name": "security.jwt.access-token-minutes",
+			"type": "java.lang.Long",
+			"description": "Access token validity duration in minutes"
+		},
+		{
+			"name": "security.jwt.refresh-token-days",
+			"type": "java.lang.Long",
+			"description": "Refresh token validity duration in days"
+		}
+	]
+}
