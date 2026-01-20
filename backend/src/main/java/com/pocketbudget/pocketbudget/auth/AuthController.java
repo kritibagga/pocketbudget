@@ -2,7 +2,6 @@ package com.pocketbudget.pocketbudget.auth;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pocketbudget.pocketbudget.auth.dto.AuthResponse;
 import com.pocketbudget.pocketbudget.auth.dto.LoginRequest;
+import com.pocketbudget.pocketbudget.auth.dto.RefreshRequest;
 import com.pocketbudget.pocketbudget.auth.dto.RegisterOwnerRequest;
 import com.pocketbudget.pocketbudget.household.Household;
 import com.pocketbudget.pocketbudget.household.HouseholdRepository;
@@ -111,6 +111,50 @@ public class AuthController {
         return new AuthResponse(accessToken, refreshTokenValue);
 
 
+    }
+
+    @PostMapping("/refresh")
+    public AuthResponse refresh(@Valid @RequestBody RefreshRequest req){
+
+        RefreshToken stored=refreshTokens.findByToken(req.refreshToken)
+                .orElseThrow(()->new RuntimeException("Invalid refresh token"));
+
+        if(stored.isRevoked()){
+            throw new RuntimeException("Refresh Token revoked");
+        }
+
+        if(stored.getExpiresAt().isBefore(Instant.now())){
+            throw new RuntimeException("Refresh token expired");
+        }
+
+        User user =stored.getUser();
+
+        String newAccessToken =jwtService.createAccessToken(user);
+        stored.setRevoked(true);
+        refreshTokens.save(stored);
+
+        String newRefreshTokenValue = UUID.randomUUID().toString();
+
+        RefreshToken newRt=new RefreshToken();
+
+        newRt.setUser(user);
+        newRt.setToken(newRefreshTokenValue);
+        newRt.setRevoked(false);
+        newRt.setExpiresAt(Instant.now().plus(jwtProps.getRefreshDays(), ChronoUnit.DAYS));
+        refreshTokens.save(newRt);
+
+        return new AuthResponse(newAccessToken, newRefreshTokenValue);
+
+
+    }
+
+    @PostMapping("/logout")
+    public void logout(@Valid @RequestBody RefreshRequest req){
+        RefreshToken stored = refreshTokens.findByToken(req.refreshToken)
+                .orElseThrow(()->new RuntimeException("Invalid refresh token"));
+
+        stored.setRevoked(true);
+        refreshTokens.save(stored);
     }
 
 
