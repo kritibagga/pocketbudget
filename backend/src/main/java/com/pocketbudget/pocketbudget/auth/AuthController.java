@@ -14,6 +14,7 @@ import com.pocketbudget.pocketbudget.auth.dto.AuthResponse;
 import com.pocketbudget.pocketbudget.auth.dto.LoginRequest;
 import com.pocketbudget.pocketbudget.auth.dto.RefreshRequest;
 import com.pocketbudget.pocketbudget.auth.dto.RegisterOwnerRequest;
+import com.pocketbudget.pocketbudget.auth.dto.RegisterSpouseRequest;
 import com.pocketbudget.pocketbudget.household.Household;
 import com.pocketbudget.pocketbudget.household.HouseholdRepository;
 import com.pocketbudget.pocketbudget.security.JwtProperties;
@@ -155,6 +156,44 @@ public class AuthController {
 
         stored.setRevoked(true);
         refreshTokens.save(stored);
+    }
+
+    @PostMapping("/register-spouse")
+    public AuthResponse registerSpouse(@Valid @RequestBody RegisterSpouseRequest req){
+
+        if(users.findByEmail(req.email).isPresent()){
+            throw new RuntimeException("Email is already used");
+
+        }
+
+        Household household=households.findByInviteCode(req.inviteCode)
+                .orElseThrow(()-> new RuntimeException("Invalid invite code"));
+
+        long members=users.countByHouseholdId(household.getId());
+        if(members >=2){
+            throw new RuntimeException("Household already has two users");
+
+        }
+
+        User spouse =new User();
+        spouse.setEmail(req.email);
+        spouse.setPasswordHash(passwordEncoder.encode(req.password));
+        spouse.setRole(Role.SPOUSE);
+        spouse.setHousehold(household);
+        spouse=users.save(spouse);
+
+        String accessToken =jwtService.createAccessToken(spouse);
+
+        String refreshTokenValue=UUID.randomUUID().toString();
+        RefreshToken rt = new RefreshToken();
+        rt.setUser(spouse);
+        rt.setToken(refreshTokenValue);
+        rt.setRevoked(false);
+        rt.setExpiresAt(Instant.now().plus(jwtProps.getRefreshDays(), ChronoUnit.DAYS));
+        refreshTokens.save(rt);
+
+        return new AuthResponse(accessToken, refreshTokenValue);
+
     }
 
 
