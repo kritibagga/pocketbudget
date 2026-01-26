@@ -40,15 +40,7 @@ public class JwtService {
                 .compact();
     }
 
-    public Long getUserIdFromToken(String token){
-       Claims claims = Jwts.parser()
-                        .verifyWith(key)
-                        .build()
-                        .parseSignedClaims(token)
-                        .getPayload();
 
-        return Long.parseLong(claims.getSubject());
-    }
 
     public boolean isTokenValid(String token){
         try{
@@ -61,6 +53,21 @@ public class JwtService {
             return false;
         }
     }
+
+    public Claims getClaims(String token){
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public Long getUserIdFromToken(String token){
+         return Long.parseLong(getClaims(token).getSubject());
+     }
+
+
+
 
 
 }

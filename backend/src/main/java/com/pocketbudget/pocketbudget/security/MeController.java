@@ -12,7 +12,11 @@ public class MeController {
 
     @GetMapping("/me")
     public String me(Authentication auth){
-        return "You are logged in as: "+ auth.getName();
+
+        CurrentUser me=(CurrentUser) auth.getPrincipal();
+        return "userId="+me.getUserId()
+                + ", householdId="+ me.getHouseholdId()
+                + ", role=" + me.getRole();
     }
 
 }
